@@ -16,7 +16,7 @@ class MyModel(torch.nn.Module):
 
     def forward(self, x):
         W = self.toy_model.weight
-        W = torch.exp(W)
+        # W = torch.exp(W)
         self.toy_model.weight = torch.nn.parameter.Parameter(W)
         return self.toy_model(x)
 
@@ -29,7 +29,7 @@ class MyModelParam(torch.nn.Module):
 
     def forward(self, x):
         W = self.W
-        W = torch.exp(W)
+        # W = torch.exp(W)
         return self.toy_model(x, weight=W)
 
 
