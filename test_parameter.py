@@ -40,14 +40,14 @@ class ToyModel(torch.nn.Module):
             self.weight = torch.nn.parameter.Parameter(torch.Tensor(2, 3).fill_(0.5))
         else:
             self.register_parameter('weight', None)
-        self.func = torch.nn.parameter.Parameter(torch.Tensor(2, 2).fill_(0.1))
+        # self.func = torch.nn.parameter.Parameter(torch.Tensor(2, 2).fill_(0.1))
 
     def forward(self, x, weight=None):
         if weight is not None:
             w = weight
         else:
             w = self.weight
-        x = self.func * x
+        # x = self.func * x
         x = torch.matmul(x, w)
         return x
 
@@ -67,7 +67,7 @@ prediction = model(x)
 loss = (prediction - y).sum()
 loss.backward()
 optim.step()
-print("toyModel weight before:")
+print("toyModel weight after:")
 print(model.toy_model.weight)
 
 ########################## Test 2
@@ -84,5 +84,5 @@ prediction_param = model_param(x_param)
 loss_param = (prediction_param - y_param).sum()
 loss_param.backward()
 optim_param.step()
-print("model param weight before:")
+print("model param weight after:")
 print(model_param.W)
