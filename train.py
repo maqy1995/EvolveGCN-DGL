@@ -5,16 +5,14 @@
 @Description: 
 """
 import argparse
-import random
 
 import dgl
 import torch
 import torch.nn.functional as F
-import numpy as np
 
 from data_process import process_data
 from model import EvolveGCNO
-from utils import get_accuracy, eval_predicitions, calc_eval_measures_per_class
+from utils import eval_predicitions, calc_eval_measures_per_class
 
 
 def train(args, device):
