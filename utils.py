@@ -2,19 +2,9 @@
 """
 @Author: maqy
 @Time: 2021/7/9
-@Description: 
+@Description: utils from official code.
 """
 import torch
-from sklearn.metrics import average_precision_score
-
-
-def get_accuracy(predictions, labels):
-    probs = torch.softmax(predictions, dim=1)[:, 1]
-
-    predictions_np = probs.detach().cpu().numpy()
-    true_classes_np = labels.detach().cpu().numpy()
-
-    return average_precision_score(true_classes_np, predictions_np)
 
 
 def eval_predicitions(predictions, true_classes, num_classes):

@@ -78,6 +78,9 @@ class EvolveGCNO(nn.Module):
         self.gcn_weights_list = nn.ParameterList()
 
         # TODO according to the code of author, I think we need to write LSTM manually.
+        # see: https://github.com/IBM/EvolveGCN/blob/90869062bbc98d56935e3d92e1d9b1b4c25be593/egcn_o.py#L81
+        # But in the paper, the author said 'In other words, one uses the same GRU to process each
+        # column of the GCN weight matrix.', It makes me think it's okay to use LSTM/GRU directly.
         # Here we use torch.nn.LSTM directly, like pyg_temporal.
         # see github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py
         self.recurrent_layers.append(LSTM(input_size=n_hidden, hidden_size=n_hidden))
@@ -118,6 +121,7 @@ class EvolveGCNO(nn.Module):
                 # self.gnn_convs[i].weight = nn.Parameter(W.squeeze())
                 # ====================================================
                 W = self.gcn_weights_list[i][None, :, :]
+                # Remove the following line of code, it will become `GCN`.
                 W, _ = self.recurrent_layers[i](W)
                 feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W.squeeze())
         return self.mlp(feature_list[-1])
