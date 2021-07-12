@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-@Author: maqy
-@Time: 2021/7/7
-@Description: 
-"""
 import torch
 
 torch.manual_seed(123)
@@ -54,15 +48,15 @@ class ToyModel(torch.nn.Module):
 
 x = torch.Tensor(1, 2).fill_(0.8)
 y = torch.Tensor(1, 3).fill_(0.7)
-
+print("################## Test 1: reset GCN.weight by nn.Parameter()##################")
 model = MyModel()
 model_param = MyModelParam()
 print("toyModel weight before:")
 print(model.toy_model.weight)
 optim = torch.optim.SGD(model.parameters(), lr=1e-2)
 
-print("x: {}".format(x))
-print("y: {}".format(y))
+# print("x: {}".format(x))
+# print("y: {}".format(y))
 prediction = model(x)
 loss = (prediction - y).sum()
 loss.backward()
@@ -71,15 +65,15 @@ print("toyModel weight after:")
 print(model.toy_model.weight)
 
 ########################## Test 2
-print("################## Test 2 ##################")
+print("################## Test 2: pass weight as a parameter during forward##################")
 model_param = MyModelParam()
 print("model param weight before:")
 print(model_param.W)
 optim_param = torch.optim.SGD(model_param.parameters(), lr=1e-2)
 x_param = torch.Tensor(1, 2).fill_(0.8)
 y_param = torch.Tensor(1, 3).fill_(0.7)
-print("x_param: {}".format(x_param))
-print("y_param: {}".format(y_param))
+# print("x_param: {}".format(x_param))
+# print("y_param: {}".format(y_param))
 prediction_param = model_param(x_param)
 loss_param = (prediction_param - y_param).sum()
 loss_param.backward()
