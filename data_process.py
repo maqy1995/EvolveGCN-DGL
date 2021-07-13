@@ -2,7 +2,7 @@
 """
 @Author: maqy
 @Time: 2021/6/21
-@Description: 
+@Description: deprecated, please use dataset.py
 """
 import numpy
 import pandas
@@ -34,11 +34,15 @@ def process_data(home, add_reverse_edge=True):
     # create dgl graph
     id_time_features = torch.Tensor(id_time_features.to_numpy(dtype=float))
     id_label = torch.IntTensor(id_label.to_numpy(dtype=int))
+    src_dst_time = torch.IntTensor(src_dst_time.to_numpy(dtype=int))
 
+    # path = "/home/maqy/gnn2021/gnn/EvolveGCN-master/data/elliptic_dgl/"
+    # id_time_features = torch.Tensor(numpy.load(path+'id_time_features.npy'))
+    # id_label = torch.IntTensor(numpy.load(path+'id_label.npy'))
+    # src_dst_time = torch.IntTensor(numpy.load(path+'src_dst_time.npy'))
     # label >= 0
     id_label_mask = id_label[:, 1] >= 0
 
-    src_dst_time = torch.IntTensor(src_dst_time.to_numpy(dtype=int))
     src = src_dst_time[:, 0]
     dst = src_dst_time[:, 1]
     # id_label[:, 0] is used to add self loop
