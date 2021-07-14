@@ -81,11 +81,28 @@ class EllipticDataset:
         dst = src_dst_time[:, 1]
         # id_label[:, 0] is used to add self loop
         if self.self_loop:
-            g = dgl.graph(data=(torch.cat((src, dst, id_label[:, 0])), torch.cat((dst, src, id_label[:, 0]))),
-                          num_nodes=id_label.shape[0])
+            if self.reverse_edge:
+                g = dgl.graph(data=(torch.cat((src, dst, id_label[:, 0])), torch.cat((dst, src, id_label[:, 0]))),
+                              num_nodes=id_label.shape[0])
+                g.edata['timestamp'] = torch.cat((src_dst_time[:, 2], src_dst_time[:, 2], id_time_features[:, 1].int()))
+            else:
+                g = dgl.graph(data=(torch.cat((src, id_label[:, 0])), torch.cat((dst, id_label[:, 0]))),
+                              num_nodes=id_label.shape[0])
+                g.edata['timestamp'] = torch.cat((src_dst_time[:, 2], id_time_features[:, 1].int()))
         else:
-            g = dgl.graph(data=(torch.cat((src, id_label[:, 0])), torch.cat((dst, id_label[:, 0]))),
-                          num_nodes=id_label.shape[0])
+            if self.reverse_edge:
+                g = dgl.graph(data=(torch.cat((src, dst)), torch.cat((dst, src))),
+                              num_nodes=id_label.shape[0])
+                g.edata['timestamp'] = torch.cat((src_dst_time[:, 2], src_dst_time[:, 2]))
+            else:
+                g = dgl.graph(data=(src, dst),
+                              num_nodes=id_label.shape[0])
+                g.edata['timestamp'] = src_dst_time[:, 2]
+
+        time_features = id_time_features[:, 1:]
+        label = id_label[:, 1]
+        g.ndata['label'] = label
+        g.ndata['feat'] = time_features
 
         node_mask_by_time = []
         # edge_mask_by_time = []
@@ -94,16 +111,6 @@ class EllipticDataset:
         for i in range(start_time, end_time + 1):
             node_mask = id_time_features[:, 1] == i
             node_mask_by_time.append(node_mask)
-
-        time_features = id_time_features[:, 1:]
-        label = id_label[:, 1]
-        g.ndata['label'] = label
-        g.ndata['feat'] = time_features
-
-        if self.reverse_edge:
-            g.edata['timestamp'] = torch.cat((src_dst_time[:, 2], src_dst_time[:, 2], id_time_features[:, 1].int()))
-        else:
-            g.edata['timestamp'] = torch.cat(src_dst_time[:, 2], id_time_features[:, 1].int())
 
         return g, node_mask_by_time
 
