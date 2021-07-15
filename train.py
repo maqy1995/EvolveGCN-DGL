@@ -27,9 +27,8 @@ def train(args, device):
 
     cached_subgraph = []
     cached_valid_node_mask = []
-    best_eval_f1 = 0
     for i in range(len(node_mask_by_time)):
-        # we add self loop edge when we construct full graph, not heren
+        # we add self loop edge when we construct full graph, not here
         node_subgraph = dgl.node_subgraph(graph=g, nodes=node_mask_by_time[i])
         cached_subgraph.append(node_subgraph.to(device))
         valid_node_mask = node_subgraph.ndata['label'] >= 0
@@ -46,9 +45,9 @@ def train(args, device):
     loss_class_weight = [float(w) for w in args.loss_class_weight.split(',')]
     loss_class_weight = torch.Tensor(loss_class_weight).to(device)
 
-    train_measure = Measure(num_classes=2, target_class=args.eval_class_id)
-    valid_measure = Measure(num_classes=2, target_class=args.eval_class_id)
-    test_measure = Measure(num_classes=2, target_class=args.eval_class_id)
+    train_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
+    valid_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
+    test_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
     # TODO data split from dataset.py
     train_max_index = 30
     valid_max_index = 35
