@@ -112,6 +112,7 @@ class EvolveGCNO(nn.Module):
         for g in g_list:
             feature_list.append(g.ndata['feat'])
         for i in range(self.num_layers):
+            W = self.gcn_weights_list[i][None, :, :]
             for j, g in enumerate(g_list):
                 # Attention: I try to use the below code to set gcn.weight(similar to pyG_temporal),
                 # but it doesn't work. And I make a demo try to get the difference. see test_parameter.py
@@ -120,7 +121,7 @@ class EvolveGCNO(nn.Module):
                 # W, _ = self.recurrent_layers[i](W)
                 # self.gnn_convs[i].weight = nn.Parameter(W.squeeze())
                 # ====================================================
-                W = self.gcn_weights_list[i][None, :, :]
+
                 # Remove the following line of code, it will become `GCN`.
                 W, _ = self.recurrent_layers[i](W)
                 feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W.squeeze())
