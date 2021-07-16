@@ -136,6 +136,9 @@ def train(args, device):
 
     print("Best test f1 is {}, in Epoch {}"
           .format(test_measure.target_best_f1, test_measure.target_best_f1_epoch))
+    if test_measure.target_best_f1_epoch != valid_measure.target_best_f1_epoch:
+        print("The Epoch get best Valid measure not get the best Test measure, "
+              "please checkout the test result in Epoch {}".format(valid_measure.target_best_f1_epoch))
 
 
 if __name__ == "__main__":
@@ -151,7 +154,7 @@ if __name__ == "__main__":
                            help="the dir store processed raw data")
     argparser.add_argument('--gpu', type=int, default=1,
                            help="GPU device ID. Use -1 for CPU training")
-    argparser.add_argument('--num-epochs', type=int, default=500)
+    argparser.add_argument('--num-epochs', type=int, default=1000)
     argparser.add_argument('--n-hidden', type=int, default=256)
     argparser.add_argument('--n-layers', type=int, default=2)
     argparser.add_argument('--n-hist-steps', type=int, default=5,
@@ -159,7 +162,8 @@ if __name__ == "__main__":
                                 "If it is set to 5, it means that the first batch,"
                                 "we use historical data of 0-4 to predict the data of time 5")
     argparser.add_argument('--lr', type=float, default=0.001)
-    argparser.add_argument('--loss-class-weight', type=str, default='0.35,0.65')
+    argparser.add_argument('--loss-class-weight', type=str, default='0.35,0.65',
+                           help='weight for loss, follow the official code, set 0.25, 0.75 when use EvolveGCN-H')
     argparser.add_argument('--eval-class-id', type=int, default=1,
                            help="class type to eval. In Elliptic, the id 1(illicit) is the main interest")
     argparser.add_argument('--patience', type=int, default=100,

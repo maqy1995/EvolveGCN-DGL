@@ -16,12 +16,62 @@ from dgl.nn.pytorch import GraphConv
 from torch.nn.parameter import Parameter
 
 
-def pad_with_last_val(vect, k):
-    pad = torch.ones(k - vect.size(0),
-                     dtype=torch.long,
-                     device=vect.device) * vect[-1]
-    vect = torch.cat([vect, pad])
-    return vect
+class MatGRUCell(torch.nn.Module):
+    """GRU cell for matrix, similar to official code"""
+    def __init__(self, in_feats, out_feats):
+        super().__init__()
+        self.update = MatGRUGate(in_feats,
+                                 out_feats,
+                                 torch.nn.Sigmoid())
+
+        self.reset = MatGRUGate(in_feats,
+                                out_feats,
+                                torch.nn.Sigmoid())
+
+        self.htilda = MatGRUGate(in_feats,
+                                 out_feats,
+                                 torch.nn.Tanh())
+
+    def forward(self, prev_Q, z_topk=None):
+        if z_topk is None:
+            z_topk = prev_Q
+
+        update = self.update(z_topk, prev_Q)
+        reset = self.reset(z_topk, prev_Q)
+
+        h_cap = reset * prev_Q
+        h_cap = self.htilda(z_topk, h_cap)
+
+        new_Q = (1 - update) * prev_Q + update * h_cap
+
+        return new_Q
+
+
+class MatGRUGate(torch.nn.Module):
+    """GRU gate for matrix, similar to official code"""
+    def __init__(self, rows, cols, activation):
+        super().__init__()
+        self.activation = activation
+        # the k here should be in_feats which is actually the rows
+        self.W = Parameter(torch.Tensor(rows, rows))
+        self.reset_param(self.W)
+
+        self.U = Parameter(torch.Tensor(rows, rows))
+        self.reset_param(self.U)
+
+        self.bias = Parameter(torch.zeros(rows, cols))
+
+    def reset_param(self, t):
+        # Initialize based on the number of columns
+        stdv = 1. / math.sqrt(t.size(1))
+        t.data.uniform_(-stdv, stdv)
+
+    def forward(self, x, hidden):
+        out = self.activation(self.W.matmul(x) + \
+                              self.U.matmul(hidden) + \
+                              self.bias)
+
+        return out
 
 
 class TopK(torch.nn.Module):
@@ -47,14 +97,7 @@ class TopK(torch.nn.Module):
 
         vals, topk_indices = scores.view(-1).topk(self.k)
 
-        # if topk_indices.size(0) < self.k:
-        #     topk_indices = pad_with_last_val(topk_indices, self.k)
-
         tanh = torch.nn.Tanh()
-
-        if isinstance(node_embs, torch.sparse.FloatTensor) or \
-                isinstance(node_embs, torch.cuda.sparse.FloatTensor):
-            node_embs = node_embs.to_dense()
 
         out = node_embs[topk_indices] * tanh(scores[topk_indices].view(-1, 1))
 
@@ -64,6 +107,7 @@ class TopK(torch.nn.Module):
 
 class EvolveGCNH(nn.Module):
     def __init__(self, in_feats=166, n_hidden=76, num_layers=2, n_classes=2, classifier_hidden=510):
+        # classifier_hidden follow the official config
         super(EvolveGCNH, self).__init__()
         self.num_layers = num_layers
         self.pooling_layers = nn.ModuleList()
@@ -72,16 +116,14 @@ class EvolveGCNH(nn.Module):
         self.gcn_weights_list = nn.ParameterList()
 
         self.pooling_layers.append(TopK(in_feats, n_hidden))
-        # according to the code of author, we may need to implement GRU manually.
-        # Here we use torch.nn.GRU directly, like pyg_temporal.
-        # see github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcnh.py
-        self.recurrent_layers.append(GRU(input_size=n_hidden, hidden_size=n_hidden))
+        # similar to EvolveGCNO
+        self.recurrent_layers.append(MatGRUCell(in_feats=in_feats, out_feats=n_hidden))
         self.gcn_weights_list.append(Parameter(torch.Tensor(in_feats, n_hidden)))
         self.gnn_convs.append(
             GraphConv(in_feats=in_feats, out_feats=n_hidden, bias=False, activation=nn.RReLU(), weight=False))
         for _ in range(num_layers - 1):
             self.pooling_layers.append(TopK(n_hidden, n_hidden))
-            self.recurrent_layers.append(GRU(input_size=n_hidden, hidden_size=n_hidden))
+            self.recurrent_layers.append(MatGRUCell(in_feats=n_hidden, out_feats=n_hidden))
             self.gcn_weights_list.append(Parameter(torch.Tensor(n_hidden, n_hidden)))
             self.gnn_convs.append(
                 GraphConv(in_feats=n_hidden, out_feats=n_hidden, bias=False, activation=nn.RReLU(), weight=False))
@@ -101,49 +143,41 @@ class EvolveGCNH(nn.Module):
         for g in g_list:
             feature_list.append(g.ndata['feat'])
         for i in range(self.num_layers):
-            W = self.gcn_weights_list[i][None, :, :]
+            W = self.gcn_weights_list[i]
             for j, g in enumerate(g_list):
-                # Attention: I try to use the below code to set gcn.weight(similar to pyG_temporal),
-                # but it doesn't work. And I make a demo try to get the difference. see test_parameter.py
-                # ====================================================
-                # W = self.gnn_convs[i].weight[None, :, :]
-                # W, _ = self.recurrent_layers[i](W)
-                # self.gnn_convs[i].weight = nn.Parameter(W.squeeze())
-                # ====================================================
                 X_tilde = self.pooling_layers[i](feature_list[j])
-                X_tilde = X_tilde[None, :, :]
-                _, W = self.recurrent_layers[i](X_tilde, W)
-                feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W.squeeze())
+                W = self.recurrent_layers[i](W, X_tilde)
+                feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W)
         return self.mlp(feature_list[-1])
 
 
 class EvolveGCNO(nn.Module):
     def __init__(self, in_feats, n_hidden, num_layers=2, n_classes=2, classifier_hidden=307):
+        # classifier_hidden follow the official config
         super(EvolveGCNO, self).__init__()
         self.num_layers = num_layers
         self.recurrent_layers = nn.ModuleList()
         self.gnn_convs = nn.ModuleList()
         self.gcn_weights_list = nn.ParameterList()
 
-        # According to the code of author, we may need to write LSTM manually.
-        # PS: the code by official seems not use LSTM to implement EvolveGCN-O, they use GRU directly.
-        # See: https://github.com/IBM/EvolveGCN/blob/90869062bbc98d56935e3d92e1d9b1b4c25be593/egcn_o.py#L81
-        # But in the paper, the author said 'In other words, one uses the same GRU to process each
-        # column of the GCN weight matrix.', It makes me think it's okay to use LSTM/GRU directly.
-        # ~~Here we use torch.nn.LSTM directly, like pyg_temporal.~~
-        # update: use LSTM directly will reduce f1 score(about 0.1).
-        # see github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py
-        self.recurrent_layers.append(LSTM(input_size=n_hidden, hidden_size=n_hidden))
+        # In the paper, EvolveGCN-O use LSTM as RNN layer. According to the official code,
+        # EvolveGCN-O use GRU as RNN layer. Here we follow the official code.
+        # See: https://github.com/IBM/EvolveGCN/blob/90869062bbc98d56935e3d92e1d9b1b4c25be593/egcn_o.py#L53
+        # PS: I try to use torch.nn.LSTM directly,
+        #     like pyg_[temporal](github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py)
+        #     but the performance is worse than use torch.nn.GRU.
+        # PPS: I think torch.nn.GRU can't match the manually implemented GRU cell in official code,
+        #      we follow the official code here.
+        self.recurrent_layers.append(MatGRUCell(in_feats=in_feats, out_feats=n_hidden))
         self.gcn_weights_list.append(Parameter(torch.Tensor(in_feats, n_hidden)))
         self.gnn_convs.append(
             GraphConv(in_feats=in_feats, out_feats=n_hidden, bias=False, activation=nn.RReLU(), weight=False))
         for _ in range(num_layers - 1):
-            self.recurrent_layers.append(LSTM(input_size=n_hidden, hidden_size=n_hidden))
+            self.recurrent_layers.append(MatGRUCell(in_feats=n_hidden, out_feats=n_hidden))
             self.gcn_weights_list.append(Parameter(torch.Tensor(n_hidden, n_hidden)))
             self.gnn_convs.append(
                 GraphConv(in_feats=n_hidden, out_feats=n_hidden, bias=False, activation=nn.RReLU(), weight=False))
 
-        # 307 from official parameters_elliptic_egcn_o.yaml
         self.mlp = nn.Sequential(nn.Linear(n_hidden, classifier_hidden),
                                  nn.ReLU(),
                                  nn.Linear(classifier_hidden, n_classes))
@@ -158,7 +192,7 @@ class EvolveGCNO(nn.Module):
         for g in g_list:
             feature_list.append(g.ndata['feat'])
         for i in range(self.num_layers):
-            W = self.gcn_weights_list[i][None, :, :]
+            W = self.gcn_weights_list[i]
             for j, g in enumerate(g_list):
                 # Attention: I try to use the below code to set gcn.weight(similar to pyG_temporal),
                 # but it doesn't work. And I make a demo try to get the difference. see `test_parameter.py`
@@ -169,6 +203,6 @@ class EvolveGCNO(nn.Module):
                 # ====================================================
 
                 # Remove the following line of code, it will become `GCN`.
-                W, _ = self.recurrent_layers[i](W)
-                feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W.squeeze())
+                W = self.recurrent_layers[i](W)
+                feature_list[j] = self.gnn_convs[i](g, feature_list[j], weight=W)
         return self.mlp(feature_list[-1])
