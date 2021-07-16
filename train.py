@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 
 from dataset import EllipticDataset
-from model import EvolveGCNO
+from model import EvolveGCNO, EvolveGCNH
 from utils import Measure
 
 
@@ -34,9 +34,15 @@ def train(args, device):
         valid_node_mask = node_subgraph.ndata['label'] >= 0
         cached_valid_node_mask.append(valid_node_mask)
 
-    model = EvolveGCNO(in_feats=int(g.ndata['feat'].shape[1]),
-                       n_hidden=args.n_hidden,
-                       num_layers=args.n_layers)
+    if args.model == 'EvolveGCN-O':
+        model = EvolveGCNO(in_feats=int(g.ndata['feat'].shape[1]),
+                           n_hidden=args.n_hidden,
+                           num_layers=args.n_layers)
+    elif args.model == 'EvolveGCN-H':
+        model = EvolveGCNH(in_feats=int(g.ndata['feat'].shape[1]),
+                           num_layers=args.n_layers)
+    else:
+        return NotImplementedError('Unsupported model {}'.format(args.model))
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -128,9 +134,15 @@ def train(args, device):
             print("  Test | Epoch {} | class {} | precision:{:.4f} | recall: {:.4f} | f1: {:.4f}"
                   .format(epoch, args.eval_class_id, cl_precision, cl_recall, cl_f1))
 
+    print("Best test f1 is {}, in Epoch {}"
+          .format(test_measure.target_best_f1, test_measure.target_best_f1_epoch))
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser("EvolveGCN")
+    argparser.add_argument('--model', type=str, default='EvolveGCN-O',
+                           help='we can choose EvolveGCN-O or EvolveGCN-H,'
+                                'but the EvolveGCN-H performance in Elliptic dataset is bad.')
     argparser.add_argument('--raw-dir', type=str,
                            default='/home/maqy/gnn2021/gnn/EvolveGCN-master/data/elliptic/elliptic_bitcoin_dataset/',
                            help="the raw data dir after unzip download from kaggle, which contains 3 csv file")
@@ -150,7 +162,7 @@ if __name__ == "__main__":
     argparser.add_argument('--loss-class-weight', type=str, default='0.35,0.65')
     argparser.add_argument('--eval-class-id', type=int, default=1,
                            help="class type to eval. In Elliptic, the id 1(illicit) is the main interest")
-    argparser.add_argument('--patience', type=int, default=50,
+    argparser.add_argument('--patience', type=int, default=100,
                            help="patience for early stopping")
 
     args = argparser.parse_args()
