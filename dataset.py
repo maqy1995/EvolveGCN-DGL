@@ -83,9 +83,9 @@ class EllipticDataset:
 
     def process(self):
         process_raw_data(self.raw_dir, self.processd_dir)
-        id_time_features = torch.Tensor(numpy.load(self.processd_dir + 'id_time_features.npy'))
-        id_label = torch.IntTensor(numpy.load(self.processd_dir + 'id_label.npy'))
-        src_dst_time = torch.IntTensor(numpy.load(self.processd_dir + 'src_dst_time.npy'))
+        id_time_features = torch.Tensor(numpy.load(os.path.join(self.processd_dir, 'id_time_features.npy')))
+        id_label = torch.IntTensor(numpy.load(os.path.join(self.processd_dir, 'id_label.npy')))
+        src_dst_time = torch.IntTensor(numpy.load(os.path.join(self.processd_dir, 'src_dst_time.npy')))
 
         src = src_dst_time[:, 0]
         dst = src_dst_time[:, 1]

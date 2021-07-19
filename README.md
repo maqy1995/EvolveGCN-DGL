@@ -10,16 +10,17 @@ another implement by [pyG_temporal](https://github.com/benedekrozemberczki/pytor
 ## Run
 * donwload Elliptic dataset from [kaggle](kaggle.com/ellipticco/elliptic-data-set)
 * unzip the dataset into a raw directory, such as /home/Elliptic/
-* make a new dir to save processed data, such as /home/Elliptic/processed/
+* make a new dir to save processed data, such as /home/Elliptic/processed/  
 * run train.py by:
 ```bash
-python train.py --raw-dir /home/Elliptic/ --processed-dir /home/Elliptic/processed
+python train.py --raw-dir /home/Elliptic/ --processed-dir /home/Elliptic/processed/
 ```
 
 ## Attention:  
 * only used Elliptic dataset now.
-* EvolveGCN-H is not solid in Elliptic dataset, the official code is the same.  
-Official Code Reuslt:  
+* EvolveGCN-H is not solid in Elliptic dataset, the official code is the same.   
+
+Official Code Result:  
 1. set seed to 1234, finally result is :
 > TEST epoch 189: TEST measures for class 1 - precision 0.3875 - recall 0.5714 - f1 0.4618  
 2. not set seed manually, run the same code three times:
