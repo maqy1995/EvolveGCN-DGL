@@ -1,4 +1,5 @@
 # Implement EvolveGCN with DGL
+paper link: [EvolveGCN](https://arxiv.org/abs/1902.10191)  
 official code: [IBM/EvolveGCN](https://github.com/IBM/EvolveGCN)  
 another implement by [pyG_temporal](https://github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py)  
 
@@ -17,7 +18,7 @@ python train.py --raw-dir /home/Elliptic/ --processed-dir /home/Elliptic/process
 ```
 
 ## Attention:  
-* only used Elliptic dataset now.
+* Currently only the Elliptic dataset data set is used.
 * EvolveGCN-H is not solid in Elliptic dataset, the official code is the same.   
 
 Official Code Result:  
