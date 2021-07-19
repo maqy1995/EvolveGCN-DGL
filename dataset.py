@@ -4,6 +4,7 @@
 @Time: 2021/7/12
 @Description: 
 """
+import os
 import pandas
 import numpy
 import torch
@@ -15,6 +16,14 @@ def process_raw_data(raw_dir, processed_dir):
         github.com/IBM/EvolveGCN/blob/master/elliptic_construction.md
         the main purpose is to convert original idx to contiguous idx start at 0.
     """
+    oid_nid_path = os.path.join(processed_dir, 'oid_nid.npy')
+    id_label_path = os.path.join(processed_dir, 'id_label.npy')
+    id_time_features_path = os.path.join(processed_dir, 'id_time_features.npy')
+    src_dst_time_path = os.path.join(processed_dir, 'src_dst_time.npy')
+    if os.path.exists(oid_nid_path) and os.path.exists(id_label_path) and \
+            os.path.exists(id_time_features_path) and os.path.exists(src_dst_time_path):
+        print("The preprocessed data already exists, skip the preprocess stage!")
+        return
     print("starting process raw data in {}".format(raw_dir))
     id_label = pandas.read_csv(raw_dir + 'elliptic_txs_classes.csv')
     src_dst = pandas.read_csv(raw_dir + 'elliptic_txs_edgelist.csv')
@@ -30,8 +39,8 @@ def process_raw_data(raw_dir, processed_dir):
     id_label = pandas.concat(
         [oid_nid['newId'], id_label['class'].map({'unknown': -1.0, '1': 1.0, '2': 0.0})], axis=1)
 
-    # replace originalId in id_time_features to newId.
-    # Attention: the timestamp in features start at 1; id in id_time_features also has changed.
+    # replace originalId to newId.
+    # Attention: the timestamp in features start at 1.
     id_time_features[0] = oid_nid['newId']
 
     # construct originalId2newId dict
@@ -43,24 +52,25 @@ def process_raw_data(raw_dir, processed_dir):
     # Attention: From the EvolveGCN official instruction, the timestamp with edgelist start at 0, rather than 1.
     # see: github.com/IBM/EvolveGCN/blob/master/elliptic_construction.md
     # Here we dose not follow the official instruction, which means timestamp with edgelist also start at 1.
+    # In EvolveGCN example, the edge timestamp will not be used.
     #
-    # note: in the dataset, src and dst node has the same timestamp.
+    # note: in the dataset, src and dst node has the same timestamp, so it's easy to set edge's timestamp.
     new_src = src_dst['txId1'].map(oid_nid_dict).rename('newSrc')
     new_dst = src_dst['txId2'].map(oid_nid_dict).rename('newDst')
     edge_time = new_src.map(nid_time_dict).rename('timestamp')
     src_dst_time = pandas.concat([new_src, new_dst, edge_time], axis=1)
 
     # save oid_nid, id_label, id_time_features, src_dst_time to disk. we can convert them to numpy.
-    # oid_nid: type int.  id_label: type int.   id_time_features: type float.  src_dst_time: type int.
+    # oid_nid: type int.  id_label: type int.  id_time_features: type float.  src_dst_time: type int.
     oid_nid = oid_nid.to_numpy(dtype=int)
     id_label = id_label.to_numpy(dtype=int)
     id_time_features = id_time_features.to_numpy(dtype=float)
     src_dst_time = src_dst_time.to_numpy(dtype=int)
 
-    numpy.save(processed_dir + 'oid_nid.npy', oid_nid)
-    numpy.save(processed_dir + 'id_label.npy', id_label)
-    numpy.save(processed_dir + 'id_time_features.npy', id_time_features)
-    numpy.save(processed_dir + 'src_dst_time.npy', src_dst_time)
+    numpy.save(oid_nid_path, oid_nid)
+    numpy.save(id_label_path, id_label)
+    numpy.save(id_time_features_path, id_time_features)
+    numpy.save(src_dst_time_path, src_dst_time)
     print("process Elliptic raw data done, data has saved into {}".format(processed_dir))
 
 
@@ -104,8 +114,8 @@ class EllipticDataset:
         g.ndata['label'] = label
         g.ndata['feat'] = time_features
 
+        # used to construct time-based sub-graph.
         node_mask_by_time = []
-        # edge_mask_by_time = []
         start_time = int(torch.min(id_time_features[:, 1]))
         end_time = int(torch.max(id_time_features[:, 1]))
         for i in range(start_time, end_time + 1):

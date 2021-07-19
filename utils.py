@@ -7,7 +7,7 @@
 
 
 def calculate_measure(tp, fn, fp):
-    # avoid `nan`.
+    # avoid nan
     if tp == 0:
         return 0, 0, 0
 

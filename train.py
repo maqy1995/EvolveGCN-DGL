@@ -15,7 +15,6 @@ from model import EvolveGCNO, EvolveGCNH
 from utils import Measure
 
 
-# TODO refactor code, especially about print info and the way to eval.
 def train(args, device):
     elliptic_dataset = EllipticDataset(raw_dir=args.raw_dir,
                                        processed_dir=args.processed_dir,
@@ -54,10 +53,11 @@ def train(args, device):
     train_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
     valid_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
     test_measure = Measure(num_classes=num_classes, target_class=args.eval_class_id)
-    # TODO data split from dataset.py
+    # train/valid/test split follow the paper.
     train_max_index = 30
     valid_max_index = 35
     test_max_index = 48
+    test_res_f1 = 0
     for epoch in range(args.num_epochs):
         model.train()
         for i in range(time_window_size, train_max_index + 1):
@@ -66,7 +66,6 @@ def train(args, device):
             # get predictions which has label
             predictions = predictions[cached_valid_node_mask[i]]
             labels = cached_subgraph[i].ndata['label'][cached_valid_node_mask[i]].long()
-            # loss = F.cross_entropy(predictions, labels, weight=torch.Tensor([0.35, 0.65]))
             loss = F.cross_entropy(predictions, labels, weight=loss_class_weight)
             optimizer.zero_grad()
             loss.backward()
@@ -131,6 +130,8 @@ def train(args, device):
             # reset measures for next epoch
             test_measure.reset_info()
 
+            test_res_f1 = cl_f1
+
             print("  Test | Epoch {} | class {} | precision:{:.4f} | recall: {:.4f} | f1: {:.4f}"
                   .format(epoch, args.eval_class_id, cl_precision, cl_recall, cl_f1))
 
@@ -138,7 +139,8 @@ def train(args, device):
           .format(test_measure.target_best_f1, test_measure.target_best_f1_epoch))
     if test_measure.target_best_f1_epoch != valid_measure.target_best_f1_epoch:
         print("The Epoch get best Valid measure not get the best Test measure, "
-              "please checkout the test result in Epoch {}".format(valid_measure.target_best_f1_epoch))
+              "please checkout the test result in Epoch {}, which f1 is {}"
+              .format(valid_measure.target_best_f1_epoch, test_res_f1))
 
 
 if __name__ == "__main__":
