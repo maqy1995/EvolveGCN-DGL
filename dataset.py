@@ -25,10 +25,10 @@ def process_raw_data(raw_dir, processed_dir):
         print("The preprocessed data already exists, skip the preprocess stage!")
         return
     print("starting process raw data in {}".format(raw_dir))
-    id_label = pandas.read_csv(raw_dir + 'elliptic_txs_classes.csv')
-    src_dst = pandas.read_csv(raw_dir + 'elliptic_txs_edgelist.csv')
+    id_label = pandas.read_csv(os.path.join(raw_dir, 'elliptic_txs_classes.csv'))
+    src_dst = pandas.read_csv(os.path.join(raw_dir, 'elliptic_txs_edgelist.csv'))
     # elliptic_txs_features.csv has no header, and it has the same order idx with elliptic_txs_classes.csv
-    id_time_features = pandas.read_csv(raw_dir + 'elliptic_txs_features.csv', header=None)
+    id_time_features = pandas.read_csv(os.path.join(raw_dir, 'elliptic_txs_features.csv'), header=None)
 
     # get oldId_newId
     oid_nid = id_label.loc[:, ['txId']]
