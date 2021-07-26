@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-@Author: maqy
-@Time: 2021/7/9
-@Description: utils to get measure.
-"""
-
-
 def calculate_measure(tp, fn, fp):
     # avoid nan
     if tp == 0:
@@ -21,13 +13,12 @@ def calculate_measure(tp, fn, fp):
 
 
 class Measure(object):
-
     def __init__(self, num_classes, target_class):
         """
 
         Args:
             num_classes: number of classes.
-            target_class: target class we focus on, used to print info or do early stopping.
+            target_class: target class we focus on, used to print info and do early stopping.
         """
         self.num_classes = num_classes
         self.target_class = target_class

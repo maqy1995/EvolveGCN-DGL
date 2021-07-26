@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-@Author: maqy
-@Time: 2021/6/25
-@Description:
-# we need to implement GRU/LSTM manually.
-"""
 import math
-
 import torch
 import torch.nn as nn
 from dgl.nn.pytorch import GraphConv
@@ -14,7 +6,11 @@ from torch.nn.parameter import Parameter
 
 
 class MatGRUCell(torch.nn.Module):
-    """GRU cell for matrix, similar to official code"""
+    """
+    GRU cell for matrix, similar to the official code.
+    Please refer to section 3.4 of the paper for the formula.
+    """
+
     def __init__(self, in_feats, out_feats):
         super().__init__()
         self.update = MatGRUGate(in_feats,
@@ -45,7 +41,11 @@ class MatGRUCell(torch.nn.Module):
 
 
 class MatGRUGate(torch.nn.Module):
-    """GRU gate for matrix, similar to official code"""
+    """
+    GRU gate for matrix, similar to the official code.
+    Please refer to section 3.4 of the paper for the formula.
+    """
+
     def __init__(self, rows, cols, activation):
         super().__init__()
         self.activation = activation
@@ -72,8 +72,9 @@ class MatGRUGate(torch.nn.Module):
 
 class TopK(torch.nn.Module):
     """
-    similar to official `egcn_h.py`. we only consider the node in a timestamp based subgraph,
-    so we need to pay attention to K should be less than min nodes in all subgraph.
+    Similar to the official `egcn_h.py`. We only consider the node in a timestamp based subgraph,
+    so we need to pay attention to `K` should be less than the min node numbers in all subgraph.
+    Please refer to section 3.4 of the paper for the formula.
     """
 
     def __init__(self, feats, k):
@@ -155,7 +156,7 @@ class EvolveGCNO(nn.Module):
         # EvolveGCN-O use GRU as RNN layer. Here we follow the official code.
         # See: https://github.com/IBM/EvolveGCN/blob/90869062bbc98d56935e3d92e1d9b1b4c25be593/egcn_o.py#L53
         # PS: I try to use torch.nn.LSTM directly,
-        #     like pyg_[temporal](github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py)
+        #     like [pyg_temporal](github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/torch_geometric_temporal/nn/recurrent/evolvegcno.py)
         #     but the performance is worse than use torch.nn.GRU.
         # PPS: I think torch.nn.GRU can't match the manually implemented GRU cell in the official code,
         #      we follow the official code here.
@@ -186,7 +187,8 @@ class EvolveGCNO(nn.Module):
             W = self.gcn_weights_list[i]
             for j, g in enumerate(g_list):
                 # Attention: I try to use the below code to set gcn.weight(similar to pyG_temporal),
-                # but it doesn't work.
+                # but it doesn't work. It seems that the gradient function lost in this situation,
+                # more discussion see here: https://github.com/benedekrozemberczki/pytorch_geometric_temporal/issues/80
                 # ====================================================
                 # W = self.gnn_convs[i].weight[None, :, :]
                 # W, _ = self.recurrent_layers[i](W)

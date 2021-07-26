@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-@Author: maqy
-@Time: 2021/7/12
-@Description: 
-"""
 import os
 import pandas
 import numpy
@@ -12,9 +6,13 @@ import dgl
 
 
 def process_raw_data(raw_dir, processed_dir):
-    """preprocess Elliptic dataset like EvolveGCN official instruction:
-        github.com/IBM/EvolveGCN/blob/master/elliptic_construction.md
-        the main purpose is to convert original idx to contiguous idx start at 0.
+    r"""
+
+    Description
+    -----------
+    Preprocess Elliptic dataset like the EvolveGCN official instruction:
+    github.com/IBM/EvolveGCN/blob/master/elliptic_construction.md
+    The main purpose is to convert original idx to contiguous idx start at 0.
     """
     oid_nid_path = os.path.join(processed_dir, 'oid_nid.npy')
     id_label_path = os.path.join(processed_dir, 'id_label.npy')
@@ -48,13 +46,13 @@ def process_raw_data(raw_dir, processed_dir):
     # construct newId2timestamp dict
     nid_time_dict = id_time_features.set_index([0])[1].to_dict()
 
-    # map id in edgelist to newId, and add a timestamp to each edge.
+    # Map id in edgelist to newId, and add a timestamp to each edge.
     # Attention: From the EvolveGCN official instruction, the timestamp with edgelist start at 0, rather than 1.
     # see: github.com/IBM/EvolveGCN/blob/master/elliptic_construction.md
     # Here we dose not follow the official instruction, which means timestamp with edgelist also start at 1.
     # In EvolveGCN example, the edge timestamp will not be used.
     #
-    # note: in the dataset, src and dst node has the same timestamp, so it's easy to set edge's timestamp.
+    # Note: in the dataset, src and dst node has the same timestamp, so it's easy to set edge's timestamp.
     new_src = src_dst['txId1'].map(oid_nid_dict).rename('newSrc')
     new_dst = src_dst['txId2'].map(oid_nid_dict).rename('newDst')
     edge_time = new_src.map(nid_time_dict).rename('timestamp')
@@ -71,7 +69,7 @@ def process_raw_data(raw_dir, processed_dir):
     numpy.save(id_label_path, id_label)
     numpy.save(id_time_features_path, id_time_features)
     numpy.save(src_dst_time_path, src_dst_time)
-    print("process Elliptic raw data done, data has saved into {}".format(processed_dir))
+    print("Process Elliptic raw data done, data has saved into {}".format(processed_dir))
 
 
 class EllipticDataset:
