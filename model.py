@@ -87,8 +87,7 @@ class TopK(torch.nn.Module):
     def forward(self, node_embs):
         scores = node_embs.matmul(self.scorer) / self.scorer.norm()
         vals, topk_indices = scores.view(-1).topk(self.k)
-        tanh = torch.nn.Tanh()
-        out = node_embs[topk_indices] * tanh(scores[topk_indices].view(-1, 1))
+        out = node_embs[topk_indices] * torch.tanh(scores[topk_indices].view(-1, 1))
         # we need to transpose the output
         return out.t()
 
