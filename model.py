@@ -155,6 +155,8 @@ class EvolveGCNO(nn.Module):
         # PPS: I think torch.nn.GRU can't match the manually implemented GRU cell in the official code,
         #      we follow the official code here.
         self.recurrent_layers.append(MatGRUCell(in_feats=in_feats, out_feats=n_hidden))
+        # Attention: Some people think that the weight of GCN should not be trained, which may require attention.
+        # see: https://github.com/benedekrozemberczki/pytorch_geometric_temporal/issues/80#issuecomment-910193561
         self.gcn_weights_list.append(Parameter(torch.Tensor(in_feats, n_hidden)))
         self.gnn_convs.append(
             GraphConv(in_feats=in_feats, out_feats=n_hidden, bias=False, activation=nn.RReLU(), weight=False))
